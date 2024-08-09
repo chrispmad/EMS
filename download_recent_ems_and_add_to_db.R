@@ -35,8 +35,7 @@ if(!file.exists('data/recent_ems_data_chunk.csv')){
 }
 
 # Read in new data chunk.
-rec_d = read.csv(new_data_chunk_filepath) |> 
-  as_tibble()
+rec_d <- data.table::fread(new_data_chunk_filepath)
 
 # Convert the COLLECTION_START column from scientific notation to character.
 rec_d = rec_d |> 
@@ -98,9 +97,9 @@ rec_all_to_add = rec_d_f |>
       dplyr::select(EMS_ID,MONITORING_LOCATION,COLLECTION_DATE,LOCATION_TYPE,ANALYZING_AGENCY,UNIT)
   )
 
-nrow(rec_d_f)
-nrow(rec_all_to_add)
-rm(rec_d_f); rm(rec_d);
+# nrow(rec_d_f)
+# nrow(rec_all_to_add)
+# rm(rec_d_f); rm(rec_d);
 
 # Save a table of parameters so that we know what we could filter this dataset by
 # in the future.
