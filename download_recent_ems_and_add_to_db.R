@@ -24,7 +24,7 @@ options(scipen = 999)
 db_filepath = "output/EMS.sqlite"
 new_data_chunk_filepath = 'data/recent_ems_data_chunk.csv'
 
-options(timeout = max(10000, getOption("timeout")))
+options(timeout = max(100000, getOption("timeout")))
 
 # Download recent EMS data file.
 if(!file.exists('data/recent_ems_data_chunk.csv')){
@@ -61,6 +61,8 @@ max(rec_d$COLLECTION_DATE,na.rm=T)
 con = dbConnect(RSQLite::SQLite(), 'output/EMS.sqlite')
 # con = dbConnect(RSQLite::SQLite(), db_filepath)
 
+cat("\nQuerying database to find most recent collection date...")
+
 all_dates_from_db =  DBI::dbGetQuery(con,
                                      "SELECT COLLECTION_DATE FROM results;") |> 
   mutate(COLLECTION_DATE = lubridate::ymd(COLLECTION_DATE)) |> 
@@ -70,6 +72,9 @@ most_recent_date = max(all_dates_from_db,na.rm=T)
 
 # Filter the recent data chunk to just include dates at or after the most recent
 # collection date in the database.
+
+cat("\nFiltering recent data file to include dates at or after this most recent date.")
+
 rec_d_f = rec_d |> dplyr::filter(COLLECTION_DATE >= most_recent_date | is.na(COLLECTION_DATE))
 
 # Arrange by date; oldest date first.
@@ -80,22 +85,31 @@ rec_d_f = rec_d_f |>
 # most recent date, and are also present in the new data chunk to be uploaded?
 # Remove them, if so.
 
+cat("\nPulling out all records from the database for that most recent date...")
+
 # Pull out all records from the database for that most recent date.
 recs_in_db_for_date = DBI::dbGetQuery(con,
                                       paste0("select * from results where COLLECTION_DATE like '",most_recent_date,"';")) |> 
   tidyr::as_tibble()
+cat("\nRecords pulled.")
 
 # Change data type for COLLECTION_START from string to date type - this is temporary.
 recs_in_db_for_date = recs_in_db_for_date |> 
   dplyr::mutate(COLLECTION_DATE = lubridate::ymd(COLLECTION_DATE))
 
+recs_in_db_for_date = data.table::as.data.table(recs_in_db_for_date)
+
 # Perform an anti-join to make sure we are not going to add duplicate rows to the 
 # database.
-rec_all_to_add = rec_d_f |> 
-  dplyr::anti_join(
-    recs_in_db_for_date |> 
-      dplyr::select(EMS_ID,MONITORING_LOCATION,COLLECTION_DATE,LOCATION_TYPE,ANALYZING_AGENCY,UNIT)
-  )
+
+rec_all_to_add = rec_d_f[!recs_in_db_for_date, on = .(EMS_ID,MONITORING_LOCATION,COLLECTION_DATE,LOCATION_TYPE,ANALYZING_AGENCY,UNIT)]
+
+
+# rec_all_to_add = rec_d_f |> 
+#   dplyr::anti_join(
+#     recs_in_db_for_date |> 
+#       dplyr::select(EMS_ID,MONITORING_LOCATION,COLLECTION_DATE,LOCATION_TYPE,ANALYZING_AGENCY,UNIT)
+#   )
 
 # nrow(rec_d_f)
 # nrow(rec_all_to_add)
@@ -112,8 +126,10 @@ openxlsx::write.xlsx(params_in_db, 'output/parameters_in_database.xlsx')
 gc()
 
 # Make sure that the date column is actually just strings - better for database.
-rec_all_to_add = rec_all_to_add |> 
-  mutate(COLLECTION_DATE = as.character(COLLECTION_DATE))
+rec_all_to_add[, COLLECTION_DATE := as.character(COLLECTION_DATE),]
+
+# rec_all_to_add = rec_all_to_add |> 
+  # mutate(COLLECTION_DATE = as.character(COLLECTION_DATE))
 
 cat(paste0("Number of new rows to write to database: ",nrow(rec_all_to_add)))
 
@@ -126,6 +142,8 @@ record_to_check = rec_all_to_add |> arrange(desc(COLLECTION_START)) |> slice(1)
 records_to_add = rec_all_to_add |> dplyr::filter(EMS_ID == record_to_check$EMS_ID,
                                                  MONITORING_LOCATION == record_to_check$MONITORING_LOCATION,
                                                  COLLECTION_DATE == record_to_check$COLLECTION_DATE)
+
+cat("\nQuerying database to test that our upload has worked...")
 upload_test = DBI::dbGetQuery(con,
                 paste0("select * from results where EMS_ID like '",record_to_check$EMS_ID,
                        "' and MONITORING_LOCATION like '",record_to_check$MONITORING_LOCATION,
