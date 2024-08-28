@@ -5,3 +5,5 @@
 *.sqlite
 *.csv
 *.Rproj
+*.xlsx
+output/*.xlsx
