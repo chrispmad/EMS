@@ -23,6 +23,7 @@ options(scipen = 999)
 # Filepaths
 db_filepath = "output/EMS.sqlite"
 new_data_chunk_filepath = 'data/recent_ems_data_chunk.csv'
+onedrive_path = paste0(stringr::str_extract(getwd(),".*(?=Downloads/)"),"OneDrive - Government of BC/data")
 
 options(timeout = max(100000, getOption("timeout")))
 
@@ -38,8 +39,7 @@ if(!file.exists('data/recent_ems_data_chunk.csv')){
 rec_d <- data.table::fread(new_data_chunk_filepath)
 
 # Convert the COLLECTION_START column from scientific notation to character.
-rec_d = rec_d |> 
-  dplyr::mutate(COLLECTION_START = as.character(COLLECTION_START))
+rec_d = rec_d[,COLLECTION_START := as.character(COLLECTION_START)]
 
 # Convert date columns from numeric to dates.
 # Pull out year, month, day for start and end of collection.
@@ -75,7 +75,7 @@ most_recent_date = max(all_dates_from_db,na.rm=T)
 
 cat("\nFiltering recent data file to include dates at or after this most recent date.")
 
-rec_d_f = rec_d |> dplyr::filter(COLLECTION_DATE >= most_recent_date | is.na(COLLECTION_DATE))
+rec_d_f = rec_d[COLLECTION_DATE >= most_recent_date | is.na(COLLECTION_DATE),]
 
 # Arrange by date; oldest date first.
 rec_d_f = rec_d_f |>
@@ -104,17 +104,6 @@ recs_in_db_for_date = data.table::as.data.table(recs_in_db_for_date)
 
 rec_all_to_add = rec_d_f[!recs_in_db_for_date, on = .(EMS_ID,MONITORING_LOCATION,COLLECTION_DATE,LOCATION_TYPE,ANALYZING_AGENCY,UNIT)]
 
-
-# rec_all_to_add = rec_d_f |> 
-#   dplyr::anti_join(
-#     recs_in_db_for_date |> 
-#       dplyr::select(EMS_ID,MONITORING_LOCATION,COLLECTION_DATE,LOCATION_TYPE,ANALYZING_AGENCY,UNIT)
-#   )
-
-# nrow(rec_d_f)
-# nrow(rec_all_to_add)
-# rm(rec_d_f); rm(rec_d);
-
 # Save a table of parameters so that we know what we could filter this dataset by
 # in the future.
 params_in_db = rec_all_to_add |> 
@@ -126,14 +115,37 @@ openxlsx::write.xlsx(params_in_db, 'output/parameters_in_database.xlsx')
 gc()
 
 # Make sure that the date column is actually just strings - better for database.
-rec_all_to_add[, COLLECTION_DATE := as.character(COLLECTION_DATE),]
-
-# rec_all_to_add = rec_all_to_add |> 
-  # mutate(COLLECTION_DATE = as.character(COLLECTION_DATE))
+rec_all_to_add = rec_all_to_add[, COLLECTION_DATE := as.character(COLLECTION_DATE),]
 
 cat(paste0("Number of new rows to write to database: ",nrow(rec_all_to_add)))
 
+# Check - are our data types the same in this new data compared to the data already
+# present in the database?
+names(recs_in_db_for_date) == names(rec_all_to_add)
+unlist(recs_in_db_for_date |> lapply(typeof)) == unlist(rec_all_to_add |> lapply(typeof))
+
 # Now it's time to add the new data to our database!
+col_type_comp 
+
+tidyr::tibble(colname = names(recs_in_db_for_date)) |> 
+  dplyr::rowwise() |> 
+  dplyr::mutate(col_type = typeof(recs_in_db_for_date[[colname]])) |> 
+  dplyr::ungroup() |> 
+  dplyr::left_join(
+    tidyr::tibble(colname = names(rec_all_to_add)) |> 
+      dplyr::rowwise() |> 
+      dplyr::mutate(new_col_type = typeof(rec_all_to_add[[colname]])) |> 
+      dplyr::ungroup()
+  ) |> 
+  dplyr::filter(col_type != new_col_type)
+
+# for(i in 1:ncol(rec_all_to_add)){
+#   new_rec_type = typeof(rec_all_to_add[[i]])
+#   old_rec_type = typeof(recs_in_db_for_date[[i]])
+#   if(new_rec_type != old_rec_type){
+#     rec_all_to_add[[i]] = 
+#   }
+# }
 dbWriteTable(conn = con, "results", rec_all_to_add, row.names = FALSE, append = TRUE)
 
 # Let's perform a check that the new data was successfully written to the database.
@@ -168,14 +180,6 @@ DBI::dbDisconnect(con)
 
 if(upload == 'successful'){
   file.remove(new_data_chunk_filepath)
-  # file.copy('output/EMS.sqlite',
-  #           'J:/2 SCIENCE - Invasives/GENERAL/Operations/EnvironmentalMonitoringSystemDatabase/EMS.sqlite')
-  # if(file.exists('J:/2 SCIENCE - Invasives/GENERAL/Operations/EnvironmentalMonitoringSystemDatabase/EMS.sqlite')) print("Successfully copied EMS sqlite database to J: LAN folder at GENERAL/Operations/EnvironmentalMonitoringSystemDatabase")
-  # file.copy('output/parameters_in_database.xlsx',
-  #           'J:/2 SCIENCE - Invasives/GENERAL/Operations/EnvironmentalMonitoringSystemDatabase/parameters_in_database.xlsx')
+  # file.copy(from = 'output/EMS.sqlite', to = paste0(onedrive_path,"/CNF/EMS.sqlite"), overwrite = T)
+  # print("Replaced the older version of the EMS database on the OneDrive path in data/CNF folder!")
 }
-# if(file.exists('J:/2 SCIENCE - Invasives/GENERAL/Operations/EnvironmentalMonitoringSystemDatabase/EMS.sqlite')){
-#   file.remove('output/EMS.sqlite')
-#   file.remove('output/parameters_in_database.xlsx')
-#   print("Removed local database file...")
-# }

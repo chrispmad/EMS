@@ -6,4 +6,4 @@
 *.csv
 *.Rproj
 *.xlsx
-output/*.xlsx
+output/**
