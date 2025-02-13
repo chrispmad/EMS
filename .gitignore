@@ -7,3 +7,4 @@
 *.Rproj
 *.xlsx
 output/**
+request_data_outputs/**

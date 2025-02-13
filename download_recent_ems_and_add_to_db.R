@@ -57,6 +57,16 @@ rec_d$COL_START_DAY = NULL; rec_d$COL_START_MONTH = NULL; rec_d$COL_START_YEAR =
 min(rec_d$COLLECTION_DATE,na.rm=T)
 max(rec_d$COLLECTION_DATE,na.rm=T)
 
+# Is our local EMS database empty/missing? If so, transfer from OneDrive
+if(!file.exists('output/EMS.sqlite')){
+  file.copy(from = paste0(onedrive_path,'/CNF/EMS.sqlite'),
+            to = 'output/EMS.sqlite')
+}
+if(file.size('output/EMS.sqlite') == 0){
+  file.copy(from = paste0(onedrive_path,'/CNF/EMS.sqlite'),
+            to = 'output/EMS.sqlite',
+            overwrite = T)
+}
 # Identify the most recent date in the database.
 con = dbConnect(RSQLite::SQLite(), 'output/EMS.sqlite')
 # con = dbConnect(RSQLite::SQLite(), db_filepath)
