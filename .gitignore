@@ -8,3 +8,4 @@
 *.xlsx
 output/**
 request_data_outputs/**
+output/parameters_in_database.xlsx

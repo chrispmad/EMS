@@ -135,9 +135,7 @@ names(recs_in_db_for_date) == names(rec_all_to_add)
 unlist(recs_in_db_for_date |> lapply(typeof)) == unlist(rec_all_to_add |> lapply(typeof))
 
 # Now it's time to add the new data to our database!
-col_type_comp 
-
-tidyr::tibble(colname = names(recs_in_db_for_date)) |> 
+col_type_comp = tidyr::tibble(colname = names(recs_in_db_for_date)) |> 
   dplyr::rowwise() |> 
   dplyr::mutate(col_type = typeof(recs_in_db_for_date[[colname]])) |> 
   dplyr::ungroup() |> 
