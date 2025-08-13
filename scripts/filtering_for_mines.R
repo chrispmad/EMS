@@ -86,7 +86,7 @@ library(dplyr)
    dplyr::filter(UNIT == 'mg/L')
 
  # summarise mean values per parameter by subwatershed.
- subw = sf::read_sf("W:/CMadsen/shared_data_sets/subwatersheds_BC.shp")
+ subw = sf::read_sf("//SFP.IDIR.BCGOV/S140/S40203/WFC AEB/General/2 SCIENCE - Invasives/AIS_R_Projects/CMadsen_Wdrive/shared_data_sets/subwatersheds_BC.shp")
  
  mines_and_mills_DO_phos = mines_and_mills_DO_phos |> 
    dplyr::mutate(PARAMETER = dplyr::case_when(
