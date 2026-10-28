@@ -19,10 +19,7 @@ chloro <-c("chlorophyll")
 krig_enmods(chloro, output_name = "chlorophyll")
 
 phos <-c("phosphorus")
-krig_enmods(chloro, output_name = "phosphorus")
-
-
-
+krig_enmods(phos, output_name = "phosphorus")
 
 al<-c("alumninium")
 krig_enmods(al, output_name = "alumninium")
