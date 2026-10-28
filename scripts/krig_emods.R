@@ -14,7 +14,7 @@ library(lubridate)
 set.seed(123)
 #var_name = "Phosphorus"; confidence_interval = 0.99
 
-krig_ems<-function(var_name, confidence_interval = 0.99, output_name = var_name[1]){
+krig_enmods<-function(var_name, confidence_interval = 0.99, output_name){
   year_to_search = 'All'
   
   bc = bcmaps::bc_bound() |> 
@@ -60,12 +60,14 @@ krig_ems<-function(var_name, confidence_interval = 0.99, output_name = var_name[
   dbDisconnect(conn)
   
   
-  cat(paste0("Unique parameters are: \n", unique(raw_data$parameter),"\n"))
+  cat(paste0("Unique parameters are:", unique(raw_data$parameter),"\n"))
+  cat(paste0("Before processing units are:", unique(raw_data$unit),"\n"))
   
   
   ### fix units in the data
   source("scripts/standardize_units.R")
   raw_data <-standardise_units(raw_data,var_name)
+  
   # raw_data |> 
   #   group_by(UNIT) |>
   #   summarise(n = n()) |>
