@@ -2,7 +2,7 @@ standardise_units <- function(dat, var_name) {
   
   var_name <- tolower(var_name)
   
-  if (any(grepl("calcium|phosphorus", var_name))) {
+  if (any(grepl("calcium|phosphorus|chlorophyll", var_name))) {
     
     dat <- dat |>
       dplyr::filter(unit %in% c("mg/L", "µg/L")) |>
